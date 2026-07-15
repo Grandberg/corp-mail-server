@@ -1,0 +1,68 @@
+.editor {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border);
+  background: #f8fafc;
+}
+
+.toolBtn {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: #fff;
+  font-size: 0.8rem;
+}
+
+.toolBtnActive {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  margin: 0 4px;
+}
+
+.content {
+  min-height: 180px;
+  padding: 12px;
+}
+
+.content :global(.ProseMirror) {
+  outline: none;
+  min-height: 160px;
+}
+
+.content :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  color: #94a3b8;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.hiddenFile {
+  display: none;
+}
+
+.plainTextarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px;
+  border: none;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+  outline: none;
+}

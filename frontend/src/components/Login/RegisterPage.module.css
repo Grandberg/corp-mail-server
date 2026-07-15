@@ -1,0 +1,12 @@
+.registerTitle {
+  color: var(--color-primary);
+}
+
+.hint {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.875rem;
+}

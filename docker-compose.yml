@@ -1,0 +1,226 @@
+version: "3.9"
+
+# Стек: frontend + backend + redis + Haraka MTA (БД — external Supabase или docker-compose.local.yml)
+# Portainer: достаточно одного docker-compose.yml (docker-compose.mta.yml больше не обязателен).
+# Секреты и конфиг на сервере: /opt/email/secret/ и /opt/email/ (см. secrets/README.md)
+# Portainer: каталог /opt/ должен быть доступен хосту при деплое (bind mount в контейнер Portainer).
+# Backend подключается к Supabase PostgreSQL через внешнюю сеть supabase_default.
+# Убедитесь, что сеть существует: docker network ls | grep supabase_default
+
+services:
+  frontend:
+    container_name: email_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    ports:
+      - "127.0.0.1:7080:80"
+    networks:
+      - email_net
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:mode=1775,size=32m
+      - /var/run:mode=1775,size=8m
+      - /tmp:mode=1777,size=16m
+    mem_limit: 512m
+    cpus: "0.25"
+
+  backend:
+    container_name: email_backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    expose:
+      - "4000"
+    mem_limit: 1024m
+    cpus: "1.0"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "4000"
+      NODE_ENV: "production"
+      DB_MODE: external
+      REDIS_HOST: email_redis
+      REDIS_PORT: "6379"
+      CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:7080}"
+      AUTH_ENABLED: "${AUTH_ENABLED:-true}"
+      AUTH_ALLOW_REGISTER: "${AUTH_ALLOW_REGISTER:-false}"
+      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-8h}"
+      APP_TIMEZONE: "${APP_TIMEZONE:-Europe/Moscow}"
+      MAIL_MAX_ATTACHMENT_SIZE: "${MAIL_MAX_ATTACHMENT_SIZE:-26214400}"
+      MAIL_DATA_DIR: "/var/mail"
+      # IP и hostname MTA — env стека, .env и/или файлы в /opt/email/secret/
+      SERVER_PUBLIC_IP: "${SERVER_PUBLIC_IP:-}"
+      MAIL_HOSTNAME: "${MAIL_HOSTNAME:-}"
+      MTA_ENABLED: "${MTA_ENABLED:-true}"
+      HARAKA_HOST: "${HARAKA_HOST:-email_haraka}"
+      HARAKA_SUBMISSION_PORT: "${HARAKA_SUBMISSION_PORT:-587}"
+      INTERNAL_API_SECRET_FILE: /run/secrets/internal_api_secret
+      DATABASE_URL_FILE: /run/secrets/database_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+    secrets:
+      - database_url
+      - jwt_secret
+      - db_password
+      - redis_password
+      - internal_api_secret
+    volumes:
+      - mail_data:/var/mail
+      - ${EMAIL_APP_DIR:-/opt/email}:/opt/email:ro
+      # :ro — секреты читаются через loadSecrets.ts, никакой код сейчас не пишет в этот
+      # каталог. Если появится фича «подключение БД из админки» (запись database_url),
+      # для неё нужно предусмотреть отдельный узкий writable-путь/механизм,
+      # а не открывать :rw на весь каталог секретов.
+      - ${EMAIL_SECRETS_DIR:-/opt/email/secret}:/opt/email/secret:ro
+    networks:
+      - email_net
+      - supabase_default
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=256m
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    depends_on:
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: email_redis
+    restart: unless-stopped
+    command: >
+      sh -c "redis-server --requirepass $$(cat /run/secrets/redis_password)"
+    secrets:
+      - redis_password
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    networks:
+      - email_net
+    mem_limit: 256m
+    cpus: "0.25"
+
+  haraka:
+    container_name: email_haraka
+    build:
+      context: ./haraka
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "25:25"
+    # 587 (submission) НЕ публикуется на хост: наружу он не нужен (внешние MUA не
+    # используются, см. AGENTS.md п.8), а публикация 0.0.0.0:587 в сочетании со старой
+    # логикой allow_submission_relay.js превращала сервер в открытый relay для любого
+    # контейнера на shared-хосте. Backend достаёт до Haraka по имени сервиса внутри сети.
+    expose:
+      - "587"
+    environment:
+      BACKEND_URL: http://email_backend:4000
+      DATABASE_URL_FILE: /run/secrets/database_url
+      INTERNAL_API_SECRET_FILE: /run/secrets/internal_api_secret
+      HARAKA_HOSTNAME: "${MAIL_HOSTNAME:-}"
+    secrets:
+      - database_url
+      - internal_api_secret
+    volumes:
+      - mail_data:/var/mail
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ${EMAIL_APP_DIR:-/opt/email}:/opt/email:ro
+      - ${EMAIL_SECRETS_DIR:-/opt/email/secret}:/opt/email/secret:ro
+    networks:
+      - email_net
+      - supabase_default
+    depends_on:
+      backend:
+        condition: service_started
+    mem_limit: 512m
+    cpus: "0.5"
+
+  rspamd:
+    image: rspamd/rspamd:latest
+    container_name: email_rspamd
+    user: root
+    restart: unless-stopped
+    expose:
+      - "11333"
+      - "11334"
+    ports:
+      - "127.0.0.1:11334:11334"
+    environment:
+      REDIS_HOST: email_redis
+    secrets:
+      - redis_password
+    volumes:
+      - ./rspamd/local.d:/etc/rspamd/local.d.templates:ro
+      - rspamd_data:/var/lib/rspamd
+    networks:
+      - email_net
+    command: >
+      sh -c "
+        mkdir -p /etc/rspamd/local.d &&
+        cp -rL /etc/rspamd/local.d.templates/* /etc/rspamd/local.d/ 2>/dev/null || true;
+        echo 'servers = \"email_redis:6379\";' > /etc/rspamd/local.d/redis.conf;
+        if [ -f /run/secrets/redis_password ]; then
+          echo \"password = \\\"$$(cat /run/secrets/redis_password)\\\";\" >> /etc/rspamd/local.d/redis.conf;
+        fi;
+        chown -R _rspamd:_rspamd /etc/rspamd/local.d 2>/dev/null || true;
+        exec rspamd -f -u _rspamd -g _rspamd
+      "
+    depends_on:
+      redis:
+        condition: service_started
+    mem_limit: 512m
+    cpus: "0.5"
+
+secrets:
+  database_url:
+    file: ${EMAIL_SECRETS_DIR:-/opt/email/secret}/database_url
+  jwt_secret:
+    file: ${EMAIL_SECRETS_DIR:-/opt/email/secret}/jwt_secret
+  db_password:
+    file: ${EMAIL_SECRETS_DIR:-/opt/email/secret}/db_password
+  redis_password:
+    file: ${EMAIL_SECRETS_DIR:-/opt/email/secret}/redis_password
+  internal_api_secret:
+    file: ${EMAIL_SECRETS_DIR:-/opt/email/secret}/internal_api_secret
+
+volumes:
+  redis_data:
+    name: email_redis_data
+  mail_data:
+    name: email_mail_data
+  rspamd_data:
+    name: email_rspamd_data
+
+networks:
+  email_net:
+    name: email_net
+    driver: bridge
+  supabase_default:
+    external: true
+

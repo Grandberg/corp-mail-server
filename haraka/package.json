@@ -1,0 +1,12 @@
+{
+  "name": "email-haraka",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "Haraka": "^3.0.5",
+    "bcryptjs": "^2.4.3",
+    "haraka-plugin-dkim": "^1.2.0",
+    "haraka-plugin-rspamd": "^1.6.1",
+    "pg": "^8.13.0"
+  }
+}

@@ -1,0 +1,104 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.input {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.input:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.25);
+  border-color: var(--color-primary);
+}
+
+.button {
+  margin-top: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: #fef2f2;
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+.footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.logoWrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.logoImg {
+  height: 64px;
+  object-fit: contain;
+}
+

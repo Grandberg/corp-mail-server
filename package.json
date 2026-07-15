@@ -1,0 +1,14 @@
+{
+  "name": "corp-mail",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-hosted корпоративный почтовый сервер",
+  "scripts": {
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
+    "publish:public": "bash scripts/publish-public.sh",
+    "publish:public:dry": "bash scripts/publish-public.sh --dry-run"
+  }
+}

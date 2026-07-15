@@ -1,0 +1,97 @@
+.card {
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  margin-bottom: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  margin-top: 6px;
+}
+
+.badgeOk {
+  color: #15803d;
+  font-size: 0.8rem;
+}
+
+.badgePending {
+  color: #a16207;
+  font-size: 0.8rem;
+}
+
+.badgeFail {
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
+.copyBtn {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.copyBtn:hover {
+  background: #f1f5f9;
+  transform: scale(1.06);
+}
+
+.copyBtn:active {
+  transform: scale(0.94);
+}
+
+.copyBtnDone {
+  background: #ecfdf5;
+  border-color: #86efac;
+  animation: copyPop 0.35s ease;
+}
+
+.copyIcon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  color: #475569;
+}
+
+.copyBtnDone .copyIcon {
+  color: #15803d;
+}
+
+@keyframes copyPop {
+  0% {
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

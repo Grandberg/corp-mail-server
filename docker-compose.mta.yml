@@ -1,0 +1,7 @@
+# Устарело: сервис Haraka и MTA_ENABLED уже в docker-compose.yml.
+# Этот файл можно не подключать в Portainer.
+#
+# Для локального отключения MTA без Haraka:
+#   MTA_ENABLED=false docker compose up -d frontend backend redis
+
+services: {}

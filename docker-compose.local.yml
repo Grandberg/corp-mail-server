@@ -1,0 +1,56 @@
+version: "3.9"
+
+# Локальная PostgreSQL. Использование:
+#   EMAIL_SECRETS_DIR=./secrets docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+
+services:
+  db:
+    container_name: email_db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mailuser}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: ${POSTGRES_DB:-corp_mail}
+    secrets:
+      - db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - email_net
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-mailuser} -d ${POSTGRES_DB:-corp_mail}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    mem_limit: 1024m
+    cpus: "1.0"
+
+  backend:
+    environment:
+      DB_MODE: local
+      DB_HOST: email_db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-mailuser}
+      DB_NAME: ${POSTGRES_DB:-corp_mail}
+      # В Docker localhost недоступен — игнорируем database_url из секретов
+      DATABASE_URL: ""
+      NODE_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_data:
+    name: email_postgres_data
