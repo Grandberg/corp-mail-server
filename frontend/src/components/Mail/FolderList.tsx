@@ -120,8 +120,16 @@ export function FolderList({ folders, onBeforeNavigate }: FolderListProps) {
             </span>
             <span className={styles.folderName}>{folder.name}</span>
           </span>
-          {folder.unread_count > 0 && (
-            <span className={styles.badge}>{folder.unread_count}</span>
+          {folder.id === 'spam' ? (
+            <span className={styles.spamBadge}>{folder.total_count}</span>
+          ) : folder.id === 'drafts' || folder.id === 'trash' || folder.id === 'scheduled' ? (
+            folder.total_count > 0 && (
+              <span className={styles.spamBadge}>{folder.total_count}</span>
+            )
+          ) : (
+            folder.unread_count > 0 && (
+              <span className={styles.badge}>{folder.unread_count}</span>
+            )
           )}
         </NavLink>
       ))}

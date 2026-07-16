@@ -134,6 +134,8 @@ export const RecipientInput = forwardRef<RecipientInputHandle, RecipientInputPro
           ))}
           <input
             id={id}
+            type="search"
+            autoComplete="no-autofill-suggestions"
             className={styles.textInput}
             value={query}
             onChange={(e) => {

@@ -199,6 +199,7 @@ export function EmailView({
       void queryClient.invalidateQueries({ queryKey: ['folders'] })
       void queryClient.invalidateQueries({ queryKey: ['emailThread', focusId] })
       onSent()
+      navigate(`/mail/${folder}`)
     },
   })
 

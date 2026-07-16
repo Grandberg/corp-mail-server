@@ -419,6 +419,7 @@ export const api = {
       company: string
       position: string
       notes: string
+      isShared: boolean
     }>,
   ): Promise<import('@/types').Contact> {
     const { data } = await http.put<import('@/types').Contact>(`/contacts/${id}`, payload)

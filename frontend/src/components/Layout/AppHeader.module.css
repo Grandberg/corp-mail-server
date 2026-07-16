@@ -230,3 +230,31 @@
   }
 }
 
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copyEmailBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 4px;
+  border-radius: var(--radius);
+  transition: background 0.15s, color 0.15s;
+}
+
+.copyEmailBtn:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.copiedIcon {
+  color: #10b981;
+}
+

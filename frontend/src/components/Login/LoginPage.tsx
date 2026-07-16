@@ -45,8 +45,8 @@ export function LoginPage() {
         <div className={styles.logoWrapper}>
           <img src="/app_logo.png" alt="CorpMail" className={styles.logoImg} />
         </div>
-        <h1 className={styles.title}>Вход в почту</h1>
-        <p className={styles.subtitle}>Корпоративный почтовый сервер</p>
+        <h1 className={styles.title}>Authorization</h1>
+        <p></p>  
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
@@ -63,7 +63,7 @@ export function LoginPage() {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="password">Пароль</label>
+            <label className={styles.label} htmlFor="password">Password</label>
             <input
               id="password"
               className={styles.input}

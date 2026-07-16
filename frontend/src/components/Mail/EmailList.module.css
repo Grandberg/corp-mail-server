@@ -25,6 +25,7 @@
   background: transparent;
   padding: 12px 14px;
   cursor: pointer;
+  min-width: 0;
 }
 
 .item:hover,
@@ -157,18 +158,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f8fafc;
+  background: #e2e8f0;
   padding: 8px 14px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid #cbd5e1;
   cursor: pointer;
   user-select: none;
   font-weight: 600;
   font-size: 0.8rem;
-  color: var(--color-text-muted);
+  color: #334155;
 }
 
 .groupHeader:hover {
-  background: #f1f5f9;
+  background: #cbd5e1;
 }
 
 .groupHeaderToggle {
@@ -254,5 +255,79 @@
 
 .groupedList .date {
   font-size: 0.7rem;
+}
+
+.writeDraftBtn {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.2s ease;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  margin-left: 6px;
+  line-height: 1;
+}
+
+.writeDraftBtn:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-primary-hover);
+}
+
+.groupHeader:hover .writeDraftBtn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.contextMenuOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: transparent;
+}
+
+.contextMenu {
+  position: fixed;
+  z-index: 10000;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 4px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.contextMenuItem {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.contextMenuItem:hover {
+  background: #f1f5f9;
+}
+
+.contextMenuDanger {
+  color: var(--color-danger);
+}
+
+.contextMenuDanger:hover {
+  background: #fef2f2;
 }
 

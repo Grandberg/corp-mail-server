@@ -101,3 +101,10 @@
 .createBtn {
   width: auto;
 }
+
+.spamBadge {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: normal;
+  padding-left: 6px;
+}

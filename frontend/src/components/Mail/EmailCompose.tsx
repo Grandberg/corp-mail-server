@@ -14,6 +14,39 @@ import { formatSize } from '@/utils/formatDate'
 import { isBlockedExecutableFile } from '@/utils/blockedFile'
 import styles from './EmailCompose.module.css'
 
+function isDraftEmpty(
+  to: EmailAddress[],
+  cc: EmailAddress[],
+  bcc: EmailAddress[],
+  subject: string,
+  bodyHtml: string,
+  attachments: Attachment[],
+  signatureHtml?: string | null
+): boolean {
+  if (to.length > 0 || cc.length > 0 || bcc.length > 0) return false
+  if (subject.trim() !== '') return false
+  if (attachments.length > 0) return false
+
+  const cleanText = (html: string) =>
+    html
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+  const text = cleanText(bodyHtml)
+  if (!text) return true
+
+  if (signatureHtml) {
+    const sigText = cleanText(signatureHtml)
+    if (text === sigText) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export interface EmailComposeHandle {
   saveDraftSilently: () => Promise<void>
 }
@@ -21,6 +54,7 @@ export interface EmailComposeHandle {
 interface EmailComposeProps {
   mode: ComposeMode
   replyTo?: Email | null
+  initialTo?: EmailAddress[] | null
   onClose: () => void
   onSent: () => void
   onAutoSaved?: () => void
@@ -28,7 +62,7 @@ interface EmailComposeProps {
   inline?: boolean
 }
 
-function buildInitialState(mode: ComposeMode, replyTo?: Email | null) {
+function buildInitialState(mode: ComposeMode, replyTo?: Email | null, initialTo?: EmailAddress[] | null) {
   if (mode === 'draft' && replyTo) {
     return {
       to: replyTo.to_addresses ?? [],
@@ -47,7 +81,7 @@ function buildInitialState(mode: ComposeMode, replyTo?: Email | null) {
     to:
       mode === 'reply' && replyTo
         ? [{ email: replyTo.from_address, name: replyTo.from_name }]
-        : [],
+        : initialTo ?? [],
     cc: [] as EmailAddress[],
     bcc: [] as EmailAddress[],
     showCcBcc: false,
@@ -72,10 +106,10 @@ function buildInitialState(mode: ComposeMode, replyTo?: Email | null) {
 }
 
 export const EmailCompose = forwardRef<EmailComposeHandle, EmailComposeProps>(function EmailCompose(
-  { mode, replyTo, onClose, onSent, onAutoSaved, onDraftDeleted, inline = false },
+  { mode, replyTo, initialTo, onClose, onSent, onAutoSaved, onDraftDeleted, inline = false },
   ref,
 ) {
-  const initial = buildInitialState(mode, replyTo)
+  const initial = buildInitialState(mode, replyTo, initialTo)
   const [to, setTo] = useState<EmailAddress[]>(initial.to)
   const [cc, setCc] = useState<EmailAddress[]>(initial.cc)
   const [bcc, setBcc] = useState<EmailAddress[]>(initial.bcc)
@@ -112,12 +146,14 @@ export const EmailCompose = forwardRef<EmailComposeHandle, EmailComposeProps>(fu
   const canUseCcBcc = mode === 'new' || isDraftMode
   const canAutoSaveDraft = mode === 'new' || isDraftMode
 
+  const [signatureHtml, setSignatureHtml] = useState<string | null>(null)
   const [initialSignatureAppended, setInitialSignatureAppended] = useState(false)
 
   useEffect(() => {
     if ((mode === 'new' || mode === 'reply' || mode === 'forward') && !initialSignatureAppended) {
       api.getSettings().then((settings) => {
         const sig = settings.signature_html
+        setSignatureHtml(sig)
         if (sig) {
           setBodyHtml((prev) => {
             if (prev.includes(sig)) return prev
@@ -168,6 +204,10 @@ export const EmailCompose = forwardRef<EmailComposeHandle, EmailComposeProps>(fu
     const finalTo = toRef.current?.commitPending() ?? state.to
     const finalCc = ccRef.current?.commitPending() ?? state.cc
     const finalBcc = bccRef.current?.commitPending() ?? state.bcc
+
+    if (!state.draftId && isDraftEmpty(finalTo, finalCc, finalBcc, state.subject, state.bodyHtml, state.attachments, signatureHtml)) {
+      return
+    }
 
     try {
       const saved = await api.saveDraft({
@@ -238,7 +278,12 @@ export const EmailCompose = forwardRef<EmailComposeHandle, EmailComposeProps>(fu
     setError(null)
     setLoading(true)
     try {
-      await persistDraft()
+      const resolved = resolveRecipients()
+      if (!draftId && isDraftEmpty(resolved.to, resolved.cc, resolved.bcc, subject, bodyHtml, attachments, signatureHtml)) {
+        handleDiscard()
+        return
+      }
+      await persistDraft(resolved)
       onSent()
       onClose()
     } catch {
@@ -288,10 +333,16 @@ export const EmailCompose = forwardRef<EmailComposeHandle, EmailComposeProps>(fu
       return
     }
 
+    const resolved = resolveRecipients()
+    if (!draftId && isDraftEmpty(resolved.to, resolved.cc, resolved.bcc, subject, bodyHtml, attachments, signatureHtml)) {
+      handleDiscard()
+      return
+    }
+
     setError(null)
     setLoading(true)
     try {
-      await persistDraft()
+      await persistDraft(resolved)
       onSent()
       discardRequestedRef.current = true
       onClose()

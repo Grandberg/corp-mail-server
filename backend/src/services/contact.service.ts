@@ -61,11 +61,11 @@ export async function searchRecipients(userId: string, query: string): Promise<R
   const domainId = await getUserDomainId(userId)
   const like = `%${q}%`
 
-  const [contactsRes, usersRes] = await Promise.all([
+  const [contactsRes, usersRes, emailsRes] = await Promise.all([
     getPool().query<{ email: string; display_name: string | null }>(
       `SELECT email, display_name FROM contacts
        WHERE ((domain_id = $1 AND is_shared = true) OR owner_id = $2)
-         AND (LOWER(email) LIKE $3 OR LOWER(COALESCE(display_name, '')) LIKE $3)
+          AND (LOWER(email) LIKE $3 OR LOWER(COALESCE(display_name, '')) LIKE $3)
        ORDER BY COALESCE(display_name, email)
        LIMIT 15`,
       [domainId, userId, like],
@@ -77,6 +77,38 @@ export async function searchRecipients(userId: string, query: string): Promise<R
        ORDER BY COALESCE(display_name, email)
        LIMIT 15`,
       [domainId, like],
+    ),
+    getPool().query<{ email: string; name: string | null }>(
+      `WITH all_recipients AS (
+         SELECT from_address AS email, from_name AS name
+         FROM emails
+         WHERE user_id = $1 AND (LOWER(from_address) LIKE $2 OR LOWER(COALESCE(from_name, '')) LIKE $2)
+         
+         UNION
+         
+         SELECT r.email, r.name
+         FROM emails e,
+              LATERAL jsonb_to_recordset(e.to_addresses) AS r(email text, name text)
+         WHERE e.user_id = $1 AND (LOWER(r.email) LIKE $2 OR LOWER(COALESCE(r.name, '')) LIKE $2)
+         
+         UNION
+         
+         SELECT r.email, r.name
+         FROM emails e,
+              LATERAL jsonb_to_recordset(e.cc_addresses) AS r(email text, name text)
+         WHERE e.user_id = $1 AND (LOWER(r.email) LIKE $2 OR LOWER(COALESCE(r.name, '')) LIKE $2)
+         
+         UNION
+         
+         SELECT r.email, r.name
+         FROM emails e,
+              LATERAL jsonb_to_recordset(e.bcc_addresses) AS r(email text, name text)
+         WHERE e.user_id = $1 AND (LOWER(r.email) LIKE $2 OR LOWER(COALESCE(r.name, '')) LIKE $2)
+       )
+       SELECT email, name FROM all_recipients
+       WHERE email IS NOT NULL AND email != ''
+       LIMIT 30`,
+      [userId, like],
     ),
   ])
 
@@ -95,6 +127,13 @@ export async function searchRecipients(userId: string, query: string): Promise<R
     if (seen.has(key)) continue
     seen.add(key)
     results.push({ email: row.email, name: row.display_name, source: 'user' })
+  }
+
+  for (const row of emailsRes.rows) {
+    const key = row.email.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    results.push({ email: row.email, name: row.name, source: 'contact' })
   }
 
   return results.slice(0, 20)
@@ -157,6 +196,10 @@ export async function updateContact(
     throw new Error('Contact not found')
   }
 
+  if (input.isShared !== undefined && input.isShared && !actor.isSuperadmin && actor.role !== 'admin') {
+    throw new Error('Only admin can make contacts shared')
+  }
+
   const { rows } = await getPool().query<ContactRow>(
     `UPDATE contacts SET
        email = COALESCE($3, email),
@@ -165,6 +208,12 @@ export async function updateContact(
        company = COALESCE($6, company),
        position = COALESCE($7, position),
        notes = COALESCE($8, notes),
+       is_shared = COALESCE($9, is_shared),
+       owner_id = CASE
+         WHEN $9 = true THEN NULL
+         WHEN $9 = false THEN $2
+         ELSE owner_id
+       END,
        updated_at = NOW()
      WHERE id = $1
      RETURNING id, domain_id, owner_id, email, display_name, phone, company, position, notes,
@@ -178,6 +227,7 @@ export async function updateContact(
       input.company?.trim(),
       input.position?.trim(),
       input.notes?.trim(),
+      input.isShared !== undefined ? input.isShared : null,
     ],
   )
   return rows[0] ? mapContact(rows[0]) : null

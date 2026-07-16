@@ -72,3 +72,10 @@
   font-size: 0.75rem;
   color: var(--color-text-muted);
 }
+
+.textInput::-webkit-search-decoration,
+.textInput::-webkit-search-cancel-button,
+.textInput::-webkit-search-results-button,
+.textInput::-webkit-search-results-decoration {
+  display: none;
+}

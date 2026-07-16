@@ -19,7 +19,7 @@ export function MailPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
-  const { searchQuery, composing, composeMode, replyToEmail, setComposing } =
+  const { searchQuery, composing, composeMode, replyToEmail, initialTo, setComposing } =
     useEmailStore()
 
   const draftComposeRef = useRef<EmailComposeHandle>(null)
@@ -135,9 +135,12 @@ export function MailPage() {
     }
   }
 
-  async function runBulk(action: 'read' | 'unread' | 'star' | 'unstar' | 'trash') {
+  async function runBulk(action: 'read' | 'unread' | 'star' | 'unstar' | 'trash' | 'delete') {
     if (selectedIds.size === 0) return
     await api.bulkEmailAction({ ids: [...selectedIds], action })
+    if (emailId && selectedIds.has(emailId)) {
+      navigate(`/mail/${folder}`)
+    }
     setSelectedIds(new Set())
     void queryClient.invalidateQueries({ queryKey: ['emails'] })
     void queryClient.invalidateQueries({ queryKey: ['folders'] })
@@ -238,9 +241,17 @@ export function MailPage() {
               <button
                 type="button"
                 className={`${styles.bulkIconBtn} ${styles.bulkIconDanger}`}
-                title="В корзину"
-                aria-label="В корзину"
-                onClick={() => void runBulk('trash')}
+                title={folder === 'trash' ? 'Удалить навсегда' : 'В корзину'}
+                aria-label={folder === 'trash' ? 'Удалить навсегда' : 'В корзину'}
+                onClick={() => {
+                  if (folder === 'trash') {
+                    if (window.confirm('Вы действительно хотите навсегда удалить выбранные письма? Это действие невозможно отменить.')) {
+                      void runBulk('delete')
+                    }
+                  } else {
+                    void runBulk('trash')
+                  }
+                }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
@@ -307,6 +318,7 @@ export function MailPage() {
           ref={newComposeRef}
           mode={composeMode}
           replyTo={replyToEmail}
+          initialTo={initialTo}
           onClose={() => setComposing(false)}
           onSent={handleSent}
           onDraftDeleted={handleDraftDeleted}

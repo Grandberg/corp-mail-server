@@ -8,7 +8,7 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
     "lint": "npm run lint --prefix backend && npm run lint --prefix frontend",
-    "publish:public": "bash scripts/publish-public.sh",
-    "publish:public:dry": "bash scripts/publish-public.sh --dry-run"
+    "publish:public": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-public.ps1",
+    "publish:public:dry": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-public.ps1 -DryRun"
   }
 }
